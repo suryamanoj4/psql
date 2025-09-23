@@ -1,0 +1,7 @@
+[project]
+name = "pyql"
+version = "0.1.0"
+description = "The Universal, Lazy, Super-Friendly Querying Toolkit for Python"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
