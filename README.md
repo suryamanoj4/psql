@@ -13,6 +13,7 @@ With pyql, you can query lists, JSON, CSVs, Excel files, Pandas DataFrames, APIs
 - **Chainable**: jQuery-style method chaining for readable queries
 - **Familiar**: SQL-like syntax that feels natural in Python
 - **Extensible**: Easy to add new data sources and operations
+- **Type-safe**: Built-in type casting and error handling
 
 ## Installation
 
@@ -112,6 +113,45 @@ Q(data).map({
     "age": int,
     "salary": float
 })
+```
+
+## Real-World Examples
+
+### E-commerce Product Filtering
+```python
+products = [
+    {"name": "Laptop", "price": "1200.00", "rating": "4.5", "category": "electronics"},
+    # ... more products
+]
+
+# Clean and filter products
+result = (Q(products)
+          .map({"price": float, "rating": float})  # Type cast
+          .where("category", "eq", "electronics")   # Filter by category
+          .where("rating", "gt", 4.0)              # Filter by rating
+          .where("price", "lt", 1000.0)            # Filter by price
+          .select(["name", "price"], as_=["product", "cost"])  # Select with alias
+          .order_by("price")                       # Sort by price
+          .to_list())
+```
+
+### Employee Data Analysis
+```python
+employees = [
+    {"name": "alice johnson", "salary": "90000", "department": "engineering"},
+    # ... more employees
+]
+
+# Analyze employee data
+high_earners = (Q(employees)
+                .map({
+                    "salary": int,
+                    "name": lambda x: x.title()  # Format name
+                })
+                .where("salary", "gt", 100000)
+                .where("department", "eq", "engineering")
+                .select(["name", "salary"], as_=["engineer", "compensation"])
+                .to_list())
 ```
 
 ## Contributing

@@ -350,9 +350,17 @@ class Queryable:
             if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
                 items = list(data)
                 if callable(key):
-                    return sorted(items, key=key)
+                    try:
+                        return sorted(items, key=key)
+                    except Exception:
+                        # If key function fails, return items as is
+                        return items
                 else:
-                    return sorted(items, key=lambda x: x[key])
+                    try:
+                        return sorted(items, key=lambda x: x[key] if isinstance(x, dict) and key in x else None)
+                    except Exception:
+                        # If sorting fails, return items as is
+                        return items
             else:
                 # If data is not iterable, return it as is
                 return data
@@ -368,10 +376,18 @@ class Queryable:
                 groups = defaultdict(list)
                 if callable(key):
                     for item in data:
-                        groups[key(item)].append(item)
+                        try:
+                            groups[key(item)].append(item)
+                        except Exception:
+                            # If the key function fails, group under None
+                            groups[None].append(item)
                 else:
                     for item in data:
-                        groups[item[key]].append(item)
+                        try:
+                            groups[item[key]].append(item)
+                        except (KeyError, TypeError):
+                            # If the key doesn't exist or item is not a dict, group under None
+                            groups[None].append(item)
                 # Return list of (key, items) tuples
                 return list(groups.items())
             else:
