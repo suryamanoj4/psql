@@ -2,47 +2,53 @@
 pyql - The Universal, Lazy, Super-Friendly Querying Toolkit for Python
 """
 
-from typing import Any, Callable, List, Union, Iterator
+from typing import Any, Callable, List, Union, Iterator, Dict
 from functools import reduce
 from collections import defaultdict
+import csv
+import json
+import io
+from .core import DataSource
+from .registry import registry
 
 
 class Queryable:
     """A lazy, chainable interface for querying data."""
     
     def __init__(self, data: Any):
-        """Initialize with data to query."""
-        self._data = data
+        """Initialize with data to query. Uses adapters to normalize data to DataSource."""
+        # Find appropriate adapter and convert data to DataSource
+        adapter = registry.get_data_adapter(data)
+        if adapter is None:
+            # If no adapter found, treat as a list of primitives
+            if isinstance(data, list) and len(data) > 0 and all(not isinstance(item, (dict, list)) for item in data):
+                from .adapters import ListOfPrimitivesDataSource
+                self._data_source = ListOfPrimitivesDataSource(data)
+            elif isinstance(data, list) and len(data) > 0 and all(isinstance(item, dict) for item in data):
+                from .adapters import ListOfDictsDataSource
+                self._data_source = ListOfDictsDataSource(data)
+            else:
+                # Default to single value
+                from .adapters import SingleValueDataSource
+                self._data_source = SingleValueDataSource(data)
+        else:
+            self._data_source = adapter.adapt(data)
+        
         self._operations = []
     
     def filter(self, predicate: Callable) -> 'Queryable':
         """Filter elements based on a predicate function."""
         def operation(data):
-            # Handle None data
-            if data is None:
-                return []
-            
-            # Handle non-iterable data
-            if not hasattr(data, '__iter__') or isinstance(data, (str, bytes)):
+            def safe_predicate(item):
                 try:
-                    return [data] if predicate(data) else []
+                    return predicate(item)
                 except Exception:
-                    # If predicate fails on non-iterable data, return empty list
-                    return []
+                    return False
             
-            # Handle iterable data
-            try:
-                return (item for item in data if predicate(item))
-            except Exception:
-                # If predicate fails on any item, filter it out
-                def safe_predicate(item):
-                    try:
-                        return predicate(item)
-                    except Exception:
-                        return False
-                return (item for item in data if safe_predicate(item))
+            return (item for item in data if safe_predicate(item))
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
@@ -62,8 +68,6 @@ class Queryable:
         - where("field", "contains", substring) - String field contains substring
         - where("field", "starts_with", prefix) - String field starts with prefix
         - where("field", "ends_with", suffix) - String field ends with suffix
-        
-        For custom conditions, use filter() method instead.
         """
         # If first argument is callable, delegate to filter
         if callable(field):
@@ -136,10 +140,7 @@ class Queryable:
         def operation(data):
             # Handle callable
             if callable(field):
-                if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                    return (field(item) for item in data)
-                else:
-                    return field(data)
+                return (field(item) for item in data)
             
             # Handle list of fields with aliasing
             if isinstance(field, list):
@@ -157,48 +158,30 @@ class Queryable:
                                 result[alias] = None
                     return result
                 
-                if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                    return (select_fields(item) for item in data)
-                else:
-                    return select_fields(data)
+                return (select_fields(item) for item in data)
             
             # Handle single field (string) with aliasing
             if isinstance(field, str):
                 alias = as_ if isinstance(as_, str) else field
                 
-                if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                    def get_field(item):
-                        if isinstance(item, dict):
-                            return item.get(field)
-                        else:
-                            try:
-                                return getattr(item, field)
-                            except AttributeError:
-                                return None
-                    
-                    # For single field selection, we return the value directly, not a dict
-                    if as_ is None:
-                        return (get_field(item) for item in data)
-                    else:
-                        # If aliasing, return a dict
-                        return ({alias: get_field(item)} for item in data)
-                else:
-                    if isinstance(data, dict):
-                        value = data.get(field)
+                def get_field(item):
+                    if isinstance(item, dict):
+                        return item.get(field)
                     else:
                         try:
-                            value = getattr(data, field)
+                            return getattr(item, field)
                         except AttributeError:
-                            value = None
-                    
-                    # For single field selection, we return the value directly, not a dict
-                    if as_ is None:
-                        return value
-                    else:
-                        # If aliasing, return a dict
-                        return {alias: value}
+                            return None
+                
+                # For single field selection with alias, return a dict
+                if as_ is not None:
+                    return ({alias: get_field(item)} for item in data)
+                else:
+                    # Just return the field value directly
+                    return (get_field(item) for item in data)
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
@@ -234,10 +217,7 @@ class Queryable:
                         # For non-dict items, we can't apply field-specific transformations
                         return item
                 
-                if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                    return (transform_fields(item) for item in data)
-                else:
-                    return transform_fields(data)
+                return (transform_fields(item) for item in data)
             
             # Handle field-specific mapping/type casting
             if field is not None:
@@ -261,156 +241,124 @@ class Queryable:
                             value = getattr(item, field)
                             # Handle type casting
                             if isinstance(func, type):
-                                setattr(item, field, func(value))
+                                new_item = item.copy() if hasattr(item, 'copy') else item
+                                setattr(new_item, field, func(value))
                             else:
                                 # Handle transformation function
-                                setattr(item, field, func(value))
+                                new_item = item.copy() if hasattr(item, 'copy') else item
+                                setattr(new_item, field, func(value))
                         except Exception:
                             # If transformation fails, keep original value
-                            pass
-                        return item
+                            new_item = item
+                        return new_item
                 
-                if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                    return (transform_field(item) for item in data)
-                else:
-                    return transform_field(data)
+                return (transform_field(item) for item in data)
             
             # Handle general mapping function/type casting
-            if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                def safe_func(item):
-                    try:
-                        # Handle type casting
-                        if isinstance(func, type):
-                            return func(item)
-                        else:
-                            # Handle transformation function
-                            return func(item)
-                    except Exception:
-                        # If transformation fails, return item as is
-                        return item
-                return (safe_func(item) for item in data)
-            else:
+            def safe_func(item):
                 try:
                     # Handle type casting
                     if isinstance(func, type):
-                        return func(data)
+                        # Apply to the whole item
+                        return func(item) if not isinstance(item, dict) else item
                     else:
                         # Handle transformation function
-                        return func(data)
+                        return func(item)
                 except Exception:
-                    # If transformation fails, return data as is
-                    return data
+                    # If transformation fails, return item as is
+                    return item
+            return (safe_func(item) for item in data)
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
     def limit(self, n: int) -> 'Queryable':
         """Limit the number of results."""
         def operation(data):
-            if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                # Generator that yields at most n items
-                count = 0
-                for item in data:
-                    if count >= n:
-                        break
-                    yield item
-                    count += 1
-            else:
-                # If data is not iterable, return it as is (single item)
-                return data
+            count = 0
+            for item in data:
+                if count >= n:
+                    break
+                yield item
+                count += 1
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
     def skip(self, n: int) -> 'Queryable':
         """Skip the first n results."""
         def operation(data):
-            if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                # Skip first n items
-                count = 0
-                for item in data:
-                    if count >= n:
-                        yield item
-                    count += 1
-            else:
-                # If data is not iterable, return None if we're supposed to skip it
-                return None if n > 0 else data
+            count = 0
+            for item in data:
+                if count >= n:
+                    yield item
+                count += 1
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
     def order_by(self, key: Union[str, Callable]) -> 'Queryable':
         """Sort results by a key."""
         def operation(data):
-            # For lazy sorting, we need to collect all items first
-            # This is one of the limitations of lazy evaluation with sorting
-            if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                items = list(data)
-                if callable(key):
-                    try:
-                        return sorted(items, key=key)
-                    except Exception:
-                        # If key function fails, return items as is
-                        return items
-                else:
-                    try:
-                        return sorted(items, key=lambda x: x[key] if isinstance(x, dict) and key in x else None)
-                    except Exception:
-                        # If sorting fails, return items as is
-                        return items
+            items = list(data)
+            if callable(key):
+                try:
+                    return sorted(items, key=key)
+                except Exception:
+                    # If key function fails, return items as is
+                    return items
             else:
-                # If data is not iterable, return it as is
-                return data
+                try:
+                    return sorted(items, key=lambda x: x[key] if isinstance(x, dict) and key in x else None)
+                except Exception:
+                    # If sorting fails, return items as is
+                    return items
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
     def group_by(self, key: Union[str, Callable]) -> 'Queryable':
         """Group elements by a key."""
         def operation(data):
-            if hasattr(data, '__iter__') and not isinstance(data, (str, bytes)):
-                groups = defaultdict(list)
-                if callable(key):
-                    for item in data:
-                        try:
-                            groups[key(item)].append(item)
-                        except Exception:
-                            # If the key function fails, group under None
-                            groups[None].append(item)
-                else:
-                    for item in data:
-                        try:
-                            groups[item[key]].append(item)
-                        except (KeyError, TypeError):
-                            # If the key doesn't exist or item is not a dict, group under None
-                            groups[None].append(item)
-                # Return list of (key, items) tuples
-                return list(groups.items())
-            else:
-                # If data is not iterable, return it as a single group
-                return [(None, [data])] if data is not None else []
+            groups = defaultdict(list)
+            for item in data:
+                try:
+                    if callable(key):
+                        group_key = key(item)
+                    else:
+                        group_key = item[key] if isinstance(item, dict) else getattr(item, key)
+                    groups[group_key].append(item)
+                except (KeyError, AttributeError, TypeError):
+                    # If the key doesn't exist, group under None
+                    groups[None].append(item)
+            
+            # Return list of (key, items) tuples
+            return list(groups.items())
         
-        new_queryable = Queryable(self._data)
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
     def to_list(self) -> List:
         """Execute the query and return a list."""
-        result = self._data
-        for operation in self._operations:
-            result = operation(result)
+        # Start with data source
+        result_iter = iter(self._data_source)
         
-        # Convert final result to list
-        if hasattr(result, '__iter__') and not isinstance(result, (str, bytes)):
-            return list(result)
-        elif result is not None:
-            return [result]
-        else:
-            return []
+        # Apply all operations
+        for operation in self._operations:
+            result_iter = operation(result_iter)
+        
+        # Convert to list
+        return list(result_iter)
     
     def to_dict(self) -> dict:
         """Execute the query and return a dictionary."""
@@ -429,6 +377,40 @@ class Queryable:
                 return dict(result)
         # Default case - return dict with index as key
         return {i: item for i, item in enumerate(result)}
+    
+    def to_json(self) -> str:
+        """Execute the query and return a JSON string."""
+        return json.dumps(self.to_list(), indent=2)
+    
+    def to_csv(self) -> str:
+        """Execute the query and return a CSV string."""
+        data = self.to_list()
+        if not data:
+            return ""
+        
+        # Get all unique field names
+        fieldnames = set()
+        for item in data:
+            if isinstance(item, dict):
+                fieldnames.update(item.keys())
+        fieldnames = sorted(list(fieldnames)) if fieldnames else []
+        
+        if not fieldnames:
+            return ""
+        
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(data)
+        return output.getvalue()
+    
+    def to_df(self):
+        """Execute the query and return a pandas DataFrame (if pandas is available)."""
+        try:
+            import pandas as pd
+            return pd.DataFrame(self.to_list())
+        except ImportError:
+            raise ImportError("pandas is required for to_df(). Install with: pip install pandas")
 
 
 def Q(data: Any) -> Queryable:
