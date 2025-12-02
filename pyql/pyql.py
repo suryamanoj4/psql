@@ -21,6 +21,7 @@ class Queryable:
         adapter = registry.get_data_adapter(data)
         if adapter is None:
             # If no adapter found, treat as a list of primitives
+            # If no adapter found, treat as a list of primitives
             if isinstance(data, list) and len(data) > 0 and all(not isinstance(item, (dict, list)) for item in data):
                 from .adapters import ListOfPrimitivesDataSource
                 self._data_source = ListOfPrimitivesDataSource(data)
@@ -348,6 +349,97 @@ class Queryable:
         new_queryable._operations = self._operations + [operation]
         return new_queryable
     
+    def join(self, target: Any, on: str = None, left_on: str = None, right_on: str = None, how: str = "inner") -> 'Queryable':
+        """
+        Join the current data with another data source.
+        
+        :param target: The data to join with (List, CSV, JSON, etc.)
+        :param on: Key to join on (if same in both)
+        :param left_on: Key in the current data
+        :param right_on: Key in the target data
+        :param how: Type of join ('inner', 'left')
+        """
+        # specific import to avoid circular dependency if any
+        from .registry import registry
+        
+        # Normalize join keys
+        if on:
+            left_key = on
+            right_key = on
+        elif left_on and right_on:
+            left_key = left_on
+            right_key = right_on
+        else:
+            raise ValueError("Must provide either 'on' or both 'left_on' and 'right_on'")
+
+        def operation(left_data):
+            # 1. Materialize the RIGHT side (target) into a Hash Map
+            # We use a temporary Queryable to leverage the adapter system for the target
+            right_queryable = Queryable(target)
+            right_data_list = right_queryable.to_list()
+            
+            # Build Hash Map: Key -> List[Row] (to handle one-to-many)
+            right_map = defaultdict(list)
+            for item in right_data_list:
+                # Extract key value
+                if isinstance(item, dict):
+                    k = item.get(right_key)
+                else:
+                    k = getattr(item, right_key, None)
+                
+                # Only index if key exists (skip None keys for join purposes usually, 
+                # or strictly follow SQL behavior where NULL != NULL)
+                if k is not None:
+                    right_map[k].append(item)
+
+            # 2. Stream the LEFT side and probe
+            for left_item in left_data:
+                # Extract left key
+                if isinstance(left_item, dict):
+                    l_k = left_item.get(left_key)
+                else:
+                    l_k = getattr(left_item, left_key, None)
+                
+                matches = right_map.get(l_k, [])
+                
+                if not matches:
+                    if how == "left":
+                        # Yield left item with empty right fields (merged is just left item here effectively)
+                        # But to be proper, we should probably ensure it's a dict and maybe add nulls?
+                        # For simplicity in NoSQL/Dict world, we just return the left item 
+                        # optionally with suffix keys if we did collision detection, but here no collision.
+                        yield left_item
+                else:
+                    # Yield one result per match (Cross Product for this key)
+                    for right_item in matches:
+                        # Merge Logic
+                        merged = {}
+                        
+                        # Add Left items
+                        if isinstance(left_item, dict):
+                            for k, v in left_item.items():
+                                merged[k] = v
+                        else:
+                             # If primitive, this is tricky. 
+                             # Assume we wrap it or it has attributes.
+                             pass 
+
+                        # Add Right items (handle collisions)
+                        if isinstance(right_item, dict):
+                            for k, v in right_item.items():
+                                if k in merged:
+                                    # Collision!
+                                    merged[f"{k}_joined"] = v
+                                else:
+                                    merged[k] = v
+                        
+                        yield merged
+
+        new_queryable = Queryable([])
+        new_queryable._data_source = self._data_source
+        new_queryable._operations = self._operations + [operation]
+        return new_queryable
+
     def to_list(self) -> List:
         """Execute the query and return a list."""
         # Start with data source

@@ -244,6 +244,7 @@ registry.register_data_adapter(ListOfDictsAdapter)
 registry.register_data_adapter(ListOfPrimitivesAdapter)
 registry.register_data_adapter(ListOfListsAdapter)
 registry.register_data_adapter(DictAdapter)
-registry.register_data_adapter(SingleValueAdapter)
+# Register file adapters BEFORE SingleValueAdapter
 registry.register_data_adapter(CSVFileAdapter)
 registry.register_data_adapter(JSONFileAdapter)
+registry.register_data_adapter(SingleValueAdapter)
