@@ -10,9 +10,9 @@ import json
 # Add the parent directory to the path so we can import pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql.pyql import Q
-from pyql.adapters import *
-from pyql.registry import registry
+from src.pyql.pyql import Q
+from src.pyql.adapters import *
+from src.pyql.registry import registry
 
 
 def test_list_of_primitives_adapter():

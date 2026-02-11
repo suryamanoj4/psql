@@ -1,14 +1,14 @@
 """
-Comprehensive examples for pyql - The Universal, Lazy, Super-Friendly Querying Toolkit for Python
+Comprehensive examples for src.pyql - The Universal, Lazy, Super-Friendly Querying Toolkit for Python
 """
 
 import sys
 import os
 
-# Add the parent directory to the path so we can import pyql
+# Add the parent directory to the path so we can import src.pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql import Q
+from src.pyql import Q
 
 
 def example_1_basic_operations():
@@ -139,7 +139,7 @@ def example_5_working_with_different_data_types():
 
 def run_all_examples():
     """Run all examples."""
-    print("Running comprehensive examples for pyql...\n")
+    print("Running comprehensive examples for src.pyql...\n")
     
     example_1_basic_operations()
     example_2_working_with_dicts()

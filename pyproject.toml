@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "pyql"
 version = "0.1.0"
@@ -5,3 +9,13 @@ description = "The Universal, Lazy, Super-Friendly Querying Toolkit for Python"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
+
+[project.scripts]
+pyql = "pyql.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.urls]
+Homepage = "https://github.com/username/pyql"
+Repository = "https://github.com/username/pyql"

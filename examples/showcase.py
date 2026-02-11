@@ -1,19 +1,19 @@
 """
-Final showcase of pyql capabilities
+Final showcase of src.pyql capabilities
 """
 
 import sys
 import os
 
-# Add the parent directory to the path so we can import pyql
+# Add the parent directory to the path so we can import src.pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql import Q
+from src.pyql import Q
 
 
-def showcase_pyql_power():
-    """Showcase the power of pyql with a comprehensive example."""
-    print("=== pyql: The Universal, Lazy, Super-Friendly Querying Toolkit ===")
+def showcase_src.pyql_power():
+    """Showcase the power of src.pyql with a comprehensive example."""
+    print("=== src.pyql: The Universal, Lazy, Super-Friendly Querying Toolkit ===")
     print()
     
     # Example 1: E-commerce data processing
@@ -25,7 +25,7 @@ def showcase_pyql_power():
         {"id": "4", "name": "desk", "category": "furniture", "price": "300.00", "rating": "4.3", "in_stock": "true"},
     ]
     
-    # Process with pyql
+    # Process with src.pyql
     affordable_electronics = (
         Q(products)
         .map({"price": float, "rating": float, "in_stock": lambda x: x.lower() == "true", "id": int})
@@ -108,10 +108,10 @@ def showcase_pyql_power():
     
     print(f"   Honor students: {honor_students}")
     
-    print("\n✨ With pyql, you can query anything, anywhere, using one simple, chainable, lazy syntax!")
+    print("\n✨ With src.pyql, you can query anything, anywhere, using one simple, chainable, lazy syntax!")
     print("   Stop converting. Stop boilerplate. Stop switching syntax.")
     print("   Query like you're speaking Python. 🐍")
 
 
 if __name__ == "__main__":
-    showcase_pyql_power()
+    showcase_src.pyql_power()

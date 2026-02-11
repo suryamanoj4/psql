@@ -1,7 +1,7 @@
 import unittest
 import os
 import csv
-from pyql import Q
+from src.pyql import Q
 
 class TestJoins(unittest.TestCase):
 
