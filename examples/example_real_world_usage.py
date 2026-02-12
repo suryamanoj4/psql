@@ -1,5 +1,5 @@
 """
-Real-world usage examples for pyql - showcasing the adapter system and common representation
+Real-world usage examples for src.pyql - showcasing the adapter system and common representation
 """
 
 import sys
@@ -7,10 +7,10 @@ import os
 import tempfile
 import json
 
-# Add the parent directory to the path so we can import pyql
+# Add the parent directory to the path so we can import src.pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql import Q
+from src.pyql import Q
 
 
 def example_data_normalization():
@@ -242,7 +242,7 @@ def example_output_formats():
 
 def run_all_examples():
     """Run all examples."""
-    print("Running real-world usage examples for pyql adapter system...\n")
+    print("Running real-world usage examples for src.pyql adapter system...\n")
     
     example_data_normalization()
     example_csv_file_integration()

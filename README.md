@@ -50,8 +50,40 @@ result = Q(json_data).where(lambda x: x["age"] > 25).select("name").to_list()
 - `.skip(n)`: Skip the first n results
 - `.order_by(key)`: Sort results by a key
 - `.group_by(key)`: Group elements by a key
+- `.join(target, on|left_on/right_on, how)`: Join with another data source
+- `.left_join(target, on|left_on/right_on)`: Left join with another data source
+- `.right_join(target, on|left_on/right_on)`: Right join with another data source
+- `.outer_join(target, on|left_on/right_on)`: Full outer join with another data source
+- `.cross_join(target)`: Cross join (Cartesian product) with another data source
 - `.to_list()`: Execute the query and return a list
 - `.to_dict()`: Execute the query and return a dictionary
+
+### Enhanced `join` Method
+
+The `join` method supports various types of joins between datasets:
+
+```python
+# Inner join (default)
+result = Q(users).join(departments, left_on="dept_id", right_on="id").to_list()
+
+# Left join
+result = Q(users).left_join(departments, left_on="dept_id", right_on="id").to_list()
+
+# Right join
+result = Q(users).right_join(departments, left_on="dept_id", right_on="id").to_list()
+
+# Full outer join
+result = Q(users).outer_join(departments, left_on="dept_id", right_on="id").to_list()
+
+# Cross join (Cartesian product)
+colors = [{"color": "red"}, {"color": "blue"}]
+sizes = [{"size": "small"}, {"size": "large"}]
+result = Q(colors).cross_join(sizes).to_list()
+# [{"color": "red", "size": "small"}, {"color": "red", "size": "large"}, ...]
+
+# Join with different syntax options
+result = Q(users).join(departments, on="dept_id=id").to_list()  # When field names are the same
+```
 
 ### Enhanced `where` Method
 

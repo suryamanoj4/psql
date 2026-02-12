@@ -1,14 +1,14 @@
 """
-Examples for enhanced select method with as_ parameter in pyql
+Examples for enhanced select method with as_ parameter in src.pyql
 """
 
 import sys
 import os
 
-# Add the parent directory to the path so we can import pyql
+# Add the parent directory to the path so we can import src.pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql import Q
+from src.pyql import Q
 
 
 def example_enhanced_select():
@@ -103,7 +103,7 @@ def example_comparison_select_vs_map():
 
 def run_all_examples():
     """Run all examples."""
-    print("Running examples for enhanced select method in pyql...\n")
+    print("Running examples for enhanced select method in src.pyql...\n")
     
     example_enhanced_select()
     example_comparison_select_vs_map()

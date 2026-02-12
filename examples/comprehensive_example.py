@@ -1,14 +1,14 @@
 """
-Comprehensive example showcasing all enhanced features of pyql
+Comprehensive example showcasing all enhanced features of src.pyql
 """
 
 import sys
 import os
 
-# Add the parent directory to the path so we can import pyql
+# Add the parent directory to the path so we can import src.pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql import Q
+from src.pyql import Q
 
 
 def comprehensive_example():

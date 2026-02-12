@@ -7,138 +7,195 @@ import os
 import tempfile
 import json
 
-# Add the parent directory to the path so we can import pyql
+# Add the parent directory to the path so we can import src.pyql
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pyql import Q
+from src.pyql import Q
 
 
 def demonstrate_universal_querying():
     """Demonstrate pyql's ability to query anything, anywhere."""
     print("=== pyql: Universal Querying Demo ===")
     print()
-    
+
     # 1. Query a simple list of numbers
     print("1. Querying a list of numbers:")
     numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     result = Q(numbers).filter(lambda x: x['value'] > 5).select("value").to_list()
     print(f"   Numbers > 5: {[r for r in result]}")
     print()
-    
-    # 2. Query a list of dictionaries (JSON-like data)
-    print("2. Querying JSON-like data:")
-    employees = [
-        {"name": "Alice", "department": "Engineering", "salary": "90000", "age": "25"},
-        {"name": "Bob", "department": "Marketing", "salary": "75000", "age": "30"},
-        {"name": "Charlie", "department": "Engineering", "salary": "120000", "age": "35"},
-        {"name": "Diana", "department": "Sales", "salary": "85000", "age": "28"}
-    ]
-    high_earners = (Q(employees)
-                    .map({"salary": int, "age": int})
+
+    # 2. Query JSON file directly (employees)
+    print("2. Querying JSON file (employees):")
+    employees_json = "examples/employees.json"
+    high_earners = (Q(employees_json)
+                    .map({"age": int, "salary": int})
                     .where("salary", "gt", 80000)
-                    .where("department", "eq", "Engineering")
-                    .select(["name", "salary"], as_=["employee", "compensation"])
+                    .where("status", "eq", "active")
+                    .select(["name", "department", "salary"], as_=["employee", "dept", "compensation"])
                     .order_by("compensation")
                     .to_list())
-    print(f"   High-earning engineers: {high_earners}")
+    print(f"   High-earning active employees: {high_earners}")
     print()
-    
-    # 3. Query CSV file directly
-    print("3. Querying CSV file directly:")
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
-        f.write("product,category,price,rating\n")
-        f.write("Laptop,Electronics,1200.00,4.5\n")
-        f.write("Phone,Electronics,800.00,4.7\n")
-        f.write("Book,Education,20.00,4.8\n")
-        f.write("Desk,Furniture,300.00,4.3\n")
-        temp_csv = f.name
-    
-    try:
-        affordable_electronics = (Q(temp_csv)
-                                  .map({"price": float, "rating": float})
-                                  .where("category", "eq", "Electronics")
-                                  .where("price", "lt", 1000.0)
-                                  .where("rating", "gt", 4.0)
-                                  .select(["product", "price"], as_=["item", "cost"])
-                                  .order_by("rating")
+
+    # 3. Query CSV file directly (products)
+    print("3. Querying CSV file (products):")
+    products_csv = "examples/products.csv"
+    premium_electronics = (Q(products_csv)
+                           .map({"price": float, "stock_quantity": int, "rating": float, "reviews_count": int})
+                           .where("category", "eq", "Electronics")
+                           .where("price", "gt", 500.0)  # Changed back to 500 for premium
+                           .where("rating", "ge", 4.5)
+                           .select(["product_name", "brand", "price", "rating"], as_=["item", "maker", "cost", "stars"])
+                           .order_by("price")
+                           .to_list())
+    print(f"   Premium electronics: {premium_electronics}")
+    print()
+
+    # 4. Query JSON file (transactions) with complex operations
+    print("4. Querying JSON file (transactions) with complex operations:")
+    transactions_json = "examples/transactions.json"
+    completed_transactions = (Q(transactions_json)
+                              .map({"quantity": int, "unit_price": float, "total_amount": float,
+                                   "discount_applied": float, "final_amount": float})
+                              .where("status", "eq", "completed")
+                              .where("final_amount", "gt", 500.0)
+                              .select(["customer_name", "product_name", "final_amount", "payment_method"])
+                              .order_by("final_amount")
+                              .to_list())
+    print(f"   High-value completed transactions: {completed_transactions}")
+    print()
+
+    # 5. Demonstrate JOIN functionality
+    print("5. Demonstrating JOIN functionality:")
+    # Inner join: products and their transactions
+    product_transactions = (Q(products_csv)
+                             .join(transactions_json, left_on="product_id", right_on="product_id", how="inner")
+                             .where("status", "eq", "completed")
+                             .select(["product_name", "category", "customer_name", "final_amount"])
+                             .to_list())
+    print(f"   Products with completed transactions: {len(product_transactions)} results")
+    for item in product_transactions[:3]:  # Show first 3
+        print(f"     {item}")
+    print()
+
+    # 6. Demonstrate LEFT JOIN functionality
+    print("6. Demonstrating LEFT JOIN functionality:")
+    all_products_with_transaction_info = (Q(products_csv)
+                                         .left_join(transactions_json, left_on="product_id", right_on="product_id")
+                                         .select(["product_name", "category", "customer_name", "final_amount"])
+                                         .to_list())
+    print(f"   All products (with transaction info if available): {len(all_products_with_transaction_info)} results")
+    for item in all_products_with_transaction_info[:3]:  # Show first 3
+        print(f"     {item}")
+    print()
+
+    # 7. Demonstrate RIGHT JOIN functionality
+    print("7. Demonstrating RIGHT JOIN functionality:")
+    all_transactions_with_product_info = (Q(products_csv)
+                                         .right_join(transactions_json, left_on="product_id", right_on="product_id")
+                                         .select(["product_name", "category", "customer_name", "final_amount", "status"])
+                                         .to_list())
+    print(f"   All transactions (with product info if available): {len(all_transactions_with_product_info)} results")
+    for item in all_transactions_with_product_info[:3]:  # Show first 3
+        print(f"     {item}")
+    print()
+
+    # 8. Demonstrate CROSS JOIN functionality
+    print("8. Demonstrating CROSS JOIN functionality:")
+    departments = [{"dept_name": "Engineering"}, {"dept_name": "Marketing"}, {"dept_name": "Sales"}]
+    locations = [{"city": "New York"}, {"city": "San Francisco"}, {"city": "Austin"}]
+    dept_location_combinations = (Q(departments)
+                                  .cross_join(locations)
                                   .to_list())
-        print(f"   Affordable electronics: {affordable_electronics}")
-    finally:
-        os.unlink(temp_csv)
+    print(f"   Department-location combinations: {dept_location_combinations}")
     print()
-    
-    # 4. Query JSON file directly
-    print("4. Querying JSON file directly:")
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        json_data = [
-            {"name": "John", "scores": [85, 92, 78]},
-            {"name": "Jane", "scores": [95, 88, 96]},
-            {"name": "Bob", "scores": [70, 80, 85]}
-        ]
-        json.dump(json_data, f)
-        temp_json = f.name
-    
-    try:
-        honor_students = (Q(temp_json)
-                          .map(lambda x: {
-                              "name": x["name"],
-                              "average": sum(x["scores"]) / len(x["scores"])
-                          })
-                          .where("average", "gt", 85.0)
-                          .select(["name", "average"], as_=["student", "avg_score"])
-                          .order_by("avg_score")
-                          .to_list())
-        print(f"   Honor students: {honor_students}")
-    finally:
-        os.unlink(temp_json)
-    print()
-    
-    # 5. Query list of lists (spreadsheet-like data)
-    print("5. Querying spreadsheet-like data:")
-    spreadsheet_data = [
-        ["Name", "Department", "Age", "Salary"],
-        ["Alice", "Engineering", "25", "90000"],
-        ["Bob", "Marketing", "30", "75000"],
-        ["Charlie", "Engineering", "35", "120000"]
-    ]
-    senior_engineers = (Q(spreadsheet_data)
-                        .map({"Age": int, "Salary": int})
-                        .where("Department", "eq", "Engineering")
-                        .where("Age", "gt", 30)
-                        .select(["Name", "Salary"], as_=["Engineer", "Compensation"])
-                        .to_list())
-    print(f"   Senior engineers: {senior_engineers}")
-    print()
-    
-    # 6. Complex chained operations
-    print("6. Complex chained operations:")
-    financial_data = [
-        {"date": "2023-01-15", "amount": "250.00", "category": "Shopping", "type": "Debit"},
-        {"date": "2023-01-20", "amount": "1500.00", "category": "Salary", "type": "Credit"},
-        {"date": "2023-01-25", "amount": "80.00", "category": "Dining", "type": "Debit"},
-        {"date": "2023-02-15", "amount": "250.00", "category": "Shopping", "type": "Debit"},
-        {"date": "2023-02-20", "amount": "1500.00", "category": "Salary", "type": "Credit"}
-    ]
-    
-    monthly_expenses = (Q(financial_data)
-                         .map({"amount": float, "month": lambda x: x["date"][:7]})
-                         .where("type", "eq", "Debit")
-                         .where("amount", "gt", 100.0)
-                         .group_by("month")
-                         .map(lambda group: {
-                             "period": group[0],
-                             "total_spent": sum(t["amount"] for t in group[1]),
-                             "transactions": len(group[1])
-                         })
-                         .order_by("period")
+
+    # 9. Demonstrate advanced filtering with multiple conditions
+    print("9. Demonstrating advanced filtering with multiple conditions:")
+    filtered_products = (Q(products_csv)
+                         .map({"price": float, "stock_quantity": int, "rating": float})
+                         .where("price", "between", [50.0, 500.0])  # Note: between would need to be implemented
+                         .where("rating", "gte", 4.0)
+                         .where("stock_quantity", "gt", 30)
+                         .select(["product_name", "category", "price", "rating", "stock_quantity"])
+                         .order_by("rating")
+                         .limit(5)
                          .to_list())
-    print(f"   Monthly expenses: {monthly_expenses}")
+    # Since 'between' is not implemented, let's use gt and lt
+    filtered_products = (Q(products_csv)
+                         .map({"price": float, "stock_quantity": int, "rating": float})
+                         .where("price", "gt", 50.0)
+                         .where("price", "lt", 500.0)
+                         .where("rating", "ge", 4.0)
+                         .where("stock_quantity", "gt", 30)
+                         .select(["product_name", "category", "price", "rating", "stock_quantity"])
+                         .order_by("rating")
+                         .limit(5)
+                         .to_list())
+    print(f"   Mid-range highly-rated products in stock: {filtered_products}")
     print()
+
+    # 10. Demonstrate GROUP BY and AGGREGATION (simulated)
+    print("10. Demonstrating GROUP BY functionality:")
+    # Group products by category and count
+    products_by_category = (Q(products_csv)
+                            .map({"price": float, "stock_quantity": int, "rating": float})
+                            .group_by("category")
+                            .to_list())
+    print(f"   Products grouped by category: {len(products_by_category)} groups")
+    for group in products_by_category[:3]:  # Show first 3 groups
+        category, items = group
+        print(f"     {category}: {len(items)} products")
+    print()
+
+    # 11. Demonstrate complex chained operations
+    print("11. Demonstrating complex chained operations:")
+    # Find top-selling products by category
+    top_categories = (Q(transactions_json)
+                      .map({"quantity": int, "unit_price": float, "total_amount": float,
+                           "discount_applied": float, "final_amount": float})
+                      .where("status", "eq", "completed")
+                      .join(products_csv, left_on="product_id", right_on="product_id")
+                      .select(["category", "product_name", "final_amount"])
+                      .order_by("final_amount")
+                      .limit(5)
+                      .to_list())
+    print(f"   Top transactions by amount: {top_categories}")
+    print()
+
+    # 12. Demonstrate output formats
+    print("12. Demonstrating different output formats:")
     
+    # JSON output
+    json_result = Q(employees_json).where("department", "eq", "Engineering").to_json()
+    print(f"   JSON output (first 100 chars): {json_result[:100]}...")
+    
+    # CSV output
+    csv_result = Q(employees_json).where("age", "lt", 35).select(["name", "age", "department"]).to_csv()
+    print(f"   CSV output (first 100 chars): {csv_result[:100]}...")
+    print()
+
     print("✨ With pyql, you can query anything, anywhere, using one simple, chainable, lazy syntax!")
     print("   Stop converting. Stop boilerplate. Stop switching syntax.")
     print("   Query like you're speaking Python. 🐍")
 
 
+def demonstrate_cli_equivalents():
+    """Show equivalent CLI commands for the operations above."""
+    print("\n=== CLI EQUIVALENT COMMANDS ===")
+    print()
+    print("# Query JSON file for high earners")
+    print("pyql examples/employees.json --where 'salary > 80000' --where 'status == active' --select 'name,department,salary' --sort 'salary'")
+    print()
+    print("# Query CSV file for premium electronics")
+    print("pyql examples/products.csv --where 'category == Electronics' --where 'price > 500.0' --select 'product_name,brand,price' --sort 'price'")
+    print()
+    print("# Filter transactions")
+    print("pyql examples/transactions.json --where 'status == completed' --where 'final_amount > 500.0' --select 'customer_name,product_name,final_amount' --sort 'final_amount'")
+    print()
+
+
 if __name__ == "__main__":
     demonstrate_universal_querying()
+    demonstrate_cli_equivalents()

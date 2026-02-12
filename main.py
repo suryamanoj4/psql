@@ -1,4 +1,4 @@
-from pyql.pyql import Q
+from src.pyql.pyql import Q
 
 
 def main():
