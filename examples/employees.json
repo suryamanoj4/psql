@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice.johnson@example.com",
+    "age": 28,
+    "department": "Engineering",
+    "position": "Senior Developer",
+    "salary": 95000,
+    "hire_date": "2020-03-15",
+    "status": "active",
+    "skills": ["Python", "JavaScript", "SQL"]
+  },
+  {
+    "id": 2,
+    "name": "Bob Smith",
+    "email": "bob.smith@example.com",
+    "age": 35,
+    "department": "Marketing",
+    "position": "Marketing Manager",
+    "salary": 85000,
+    "hire_date": "2018-07-22",
+    "status": "active",
+    "skills": ["SEO", "Analytics", "Content Strategy"]
+  },
+  {
+    "id": 3,
+    "name": "Charlie Brown",
+    "email": "charlie.brown@example.com",
+    "age": 42,
+    "department": "Engineering",
+    "position": "Principal Engineer",
+    "salary": 140000,
+    "hire_date": "2015-11-10",
+    "status": "active",
+    "skills": ["System Architecture", "DevOps", "Cloud Computing"]
+  },
+  {
+    "id": 4,
+    "name": "Diana Wilson",
+    "email": "diana.wilson@example.com",
+    "age": 31,
+    "department": "Sales",
+    "position": "Account Executive",
+    "salary": 75000,
+    "hire_date": "2021-01-08",
+    "status": "active",
+    "skills": ["CRM", "Negotiation", "Lead Generation"]
+  },
+  {
+    "id": 5,
+    "name": "Eve Davis",
+    "email": "eve.davis@example.com",
+    "age": 29,
+    "department": "Engineering",
+    "position": "Software Engineer",
+    "salary": 88000,
+    "hire_date": "2022-05-12",
+    "status": "inactive",
+    "skills": ["Python", "Machine Learning", "Data Analysis"]
+  }
+]

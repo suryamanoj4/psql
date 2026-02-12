@@ -72,25 +72,53 @@ All data is normalized to `Iterator[Dict[str, Any]]` internally, providing:
 
 ### Core Methods
 
-- `Q(data)`: Create a queryable object from data
-- `.filter(predicate)`: Filter elements based on a predicate function
-- `.where(field, condition, value)`: Simple filter with intuitive syntax
-- `.select(field, as_=alias)`: Select specific fields with optional aliasing
-- `.map(func, field=name)`: Transform elements or type cast fields
-- `.limit(n)`: Limit the number of results
-- `.skip(n)`: Skip the first n results
-- `.order_by(key)`: Sort results by a key
-- `.group_by(key)`: Group elements by a key
-- `.join(target, on|left_on/right_on, how)`: Join with another data source
-- `.left_join(target, on|left_on/right_on)`: Left join with another data source
-- `.right_join(target, on|left_on/right_on)`: Right join with another data source
-- `.outer_join(target, on|left_on/right_on)`: Full outer join with another data source
-- `.cross_join(target)`: Cross join (Cartesian product) with another data source
-- `.to_list()`: Execute the query and return a list
-- `.to_dict()`: Execute the query and return a dictionary
-- `.to_json()`: Execute the query and return a JSON string
-- `.to_csv()`: Execute the query and return a CSV string
-- `.to_df()`: Execute the query and return a pandas DataFrame (if pandas is available)
+| Method | Syntax | Description |
+|--------|--------|-------------|
+| Constructor | `Q(data)` | Create a queryable object from data |
+| Filter | `.filter(predicate)` | Filter elements based on a predicate function |
+| Where | `.where(field, condition, value)` | Simple filter with intuitive syntax |
+| Select | `.select(field, as_=alias)` | Select specific fields with optional aliasing |
+| Map | `.map(func, field=name)` | Transform elements or type cast fields |
+| Limit | `.limit(n)` | Limit the number of results |
+| Skip | `.skip(n)` | Skip the first n results |
+| Order By | `.order_by(key)` | Sort results by a key |
+| Group By | `.group_by(key)` | Group elements by a key |
+| Join | `.join(target, on\|left_on/right_on, how)` | Join with another data source |
+| Left Join | `.left_join(target, on\|left_on/right_on)` | Left join with another data source |
+| Right Join | `.right_join(target, on\|left_on/right_on)` | Right join with another data source |
+| Outer Join | `.outer_join(target, on\|left_on/right_on)` | Full outer join with another data source |
+| Cross Join | `.cross_join(target)` | Cross join (Cartesian product) with another data source |
+| To List | `.to_list()` | Execute the query and return a list |
+| To Dict | `.to_dict()` | Execute the query and return a dictionary |
+| To JSON | `.to_json()` | Execute the query and return a JSON string |
+| To CSV | `.to_csv()` | Execute the query and return a CSV string |
+| To DataFrame | `.to_df()` | Execute the query and return a pandas DataFrame (if pandas is available) |
+
+### Supported Operators for `.where()`
+
+| Operator | Syntax | Description |
+|----------|--------|-------------|
+| Greater Than | `"gt"` | Field value greater than specified value |
+| Less Than | `"lt"` | Field value less than specified value |
+| Equal | `"eq"` | Field value equals specified value |
+| Not Equal | `"ne"` | Field value not equals specified value |
+| Greater or Equal | `"ge"` | Field value greater than or equal to specified value |
+| Less or Equal | `"le"` | Field value less than or equal to specified value |
+| In List | `"in"` | Field value is in the specified list |
+| Not in List | `"not_in"` | Field value is not in the specified list |
+| Contains | `"contains"` | String field contains the specified substring |
+| Starts With | `"starts_with"` | String field starts with the specified prefix |
+| Ends With | `"ends_with"` | String field ends with the specified suffix |
+
+### Join Types
+
+| Method | Syntax | Description |
+|--------|--------|-------------|
+| Inner Join | `.join(target, ...)` or `.join(target, ..., how="inner")` | Returns only matching records from both datasets |
+| Left Join | `.left_join(target, ...)` or `.join(target, ..., how="left")` | Returns all records from left dataset, with matching records from right |
+| Right Join | `.right_join(target, ...)` or `.join(target, ..., how="right")` | Returns all records from right dataset, with matching records from left |
+| Outer Join | `.outer_join(target, ...)` or `.join(target, ..., how="outer")` | Returns all records from both datasets |
+| Cross Join | `.cross_join(target)` | Returns Cartesian product of both datasets |
 
 ### Enhanced `where` Method
 

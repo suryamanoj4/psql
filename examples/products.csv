@@ -1,0 +1,11 @@
+product_id,product_name,category,brand,price,stock_quantity,rating,reviews_count,launch_date
+PROD001,iPhone 14,Electronics,Apple,999.99,45,4.8,1250,2022-09-16
+PROD002,MacBook Pro,Electronics,Apple,1999.99,20,4.9,890,2022-10-25
+PROD003,Nike Air Max,Sports,Nike,129.99,100,4.5,650,2023-01-15
+PROD004,Levi's 501 Jeans,Clothing,Levi's,69.99,75,4.3,420,2022-11-30
+PROD005,Instant Pot,Kitchen,Instant Brands,89.99,60,4.6,1200,2023-02-10
+PROD006,Kindle Paperwhite,Electronics,Amazon,139.99,30,4.7,2100,2022-12-05
+PROD007,Garmin Forerunner,Sports,Garmin,249.99,25,4.4,380,2023-03-22
+PROD008,Ray-Ban Aviators,Fashion,Ray-Ban,189.99,40,4.6,560,2022-08-18
+PROD009,Bose QuietComfort,Electronics,Bose,349.99,15,4.8,950,2023-01-30
+PROD010,Yeti Tumbler,Kitchen,Yeti,29.99,85,4.7,1800,2022-07-14
